@@ -3,6 +3,9 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 require('dotenv').config();
 
+// IMPORT ROUTES
+const authRoutes = require('./routes/auth'); 
+
 const app = express();
 
 // Middleware
@@ -14,7 +17,9 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('Connected to MongoDB successfully!'))
   .catch((err) => console.error('MongoDB connection error:', err));
 
-// Basic Route to test the server
+// USE ROUTES
+app.use('/api/auth', authRoutes);
+
 app.get('/', (req, res) => {
   res.send('TeamFlow Backend is running!');
 });
