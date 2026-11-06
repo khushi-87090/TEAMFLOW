@@ -16,7 +16,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173", 
+    origin: "*", // IMPORTANT: Allows your deployed frontend to connect!
     methods: ["GET", "POST"]
   }
 });
@@ -33,7 +33,7 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('Connected to MongoDB successfully!'))
   .catch((err) => console.error('MongoDB connection error:', err));
 
-// NEW: Object to track how many users are in each team room
+// Object to track how many users are in each team room
 const teamUsers = {};
 
 io.on('connection', (socket) => {
@@ -51,7 +51,7 @@ io.on('connection', (socket) => {
     
     console.log(`User ${socket.id} joined room: ${teamId}. Total online: ${teamUsers[teamId]}`);
     
-    // Broadcast the new count to everyone in the room (including the person who just joined)
+    // Broadcast the new count to everyone in the room
     io.to(teamId).emit('online_users_update', teamUsers[teamId]);
   });
 
