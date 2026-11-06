@@ -6,7 +6,8 @@ require('dotenv').config();
 // Import Routes
 const authRoutes = require('./routes/auth');
 const teamRoutes = require('./routes/teams');
-const taskRoutes = require('./routes/tasks'); // 1. Added Task routes import
+const taskRoutes = require('./routes/tasks'); 
+const messageRoutes = require('./routes/messages'); // 1. Added Message routes import
 
 const app = express();
 
@@ -18,7 +19,8 @@ app.use(express.json()); // Allows your server to read the JSON data from React
 // We prefix the routes to match what your frontend will call
 app.use('/api/auth', authRoutes);
 app.use('/api/teams', teamRoutes); 
-app.use('/api/tasks', taskRoutes); // 2. Added Task routes usage
+app.use('/api/tasks', taskRoutes); 
+app.use('/api/messages', messageRoutes); // 2. Added Message routes usage
 
 // Database Connection
 mongoose.connect(process.env.MONGO_URI)
