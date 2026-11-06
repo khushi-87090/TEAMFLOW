@@ -63,6 +63,26 @@ export default function Workspace() {
     }
   };
 
+  const handleUpdateStatus = async (taskId, newStatus) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://127.0.0.1:5002/api/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (response.ok) {
+        fetchTasks(); // Refresh the board instantly
+      }
+    } catch (error) {
+      console.error('Error updating task:', error);
+    }
+  };
+
   return (
     <div style={{ padding: '20px' }}>
       <Link to="/" style={{ textDecoration: 'none', color: 'blue', marginBottom: '20px', display: 'block' }}>
@@ -106,13 +126,31 @@ export default function Workspace() {
               border: '1px solid #ddd', 
               padding: '10px', 
               marginBottom: '10px', 
-              borderRadius: '5px' 
+              borderRadius: '5px',
+              backgroundColor: task.status === 'done' ? '#e8f5e9' : 'white'
             }}>
-              <strong>{task.title}</strong> 
-              <span style={{ marginLeft: '10px', padding: '2px 8px', backgroundColor: '#e0e0e0', borderRadius: '10px', fontSize: '12px' }}>
-                {task.status}
-              </span>
-              {task.description && <p style={{ margin: '5px 0 0 0', color: '#555' }}>{task.description}</p>}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <strong>{task.title}</strong> 
+                  <span style={{ marginLeft: '10px', padding: '2px 8px', backgroundColor: '#e0e0e0', borderRadius: '10px', fontSize: '12px' }}>
+                    {task.status}
+                  </span>
+                  {task.description && <p style={{ margin: '5px 0 0 0', color: '#555' }}>{task.description}</p>}
+                </div>
+                
+                {/* Status Buttons */}
+                <div>
+                  {task.status !== 'todo' && (
+                    <button onClick={() => handleUpdateStatus(task._id, 'todo')} style={{ marginRight: '5px' }}>Todo</button>
+                  )}
+                  {task.status !== 'in-progress' && (
+                    <button onClick={() => handleUpdateStatus(task._id, 'in-progress')} style={{ marginRight: '5px' }}>In Progress</button>
+                  )}
+                  {task.status !== 'done' && (
+                    <button onClick={() => handleUpdateStatus(task._id, 'done')}>Done</button>
+                  )}
+                </div>
+              </div>
             </li>
           ))}
         </ul>
