@@ -1,62 +1,109 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
-  const [user, setUser] = useState(null);
+  const [teams, setTeams] = useState([]);
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  
   const navigate = useNavigate();
 
+  // 1. Fetch the user's teams as soon as the page loads
   useEffect(() => {
-    const fetchProfile = async () => {
-      // 1. Grab the token we saved during login
+    fetchTeams();
+  }, []);
+
+  const fetchTeams = async () => {
+    try {
+      // Get the secure token we saved during login
       const token = localStorage.getItem('token');
-      
-      // 2. If no token exists, kick them back to login
       if (!token) {
-        navigate('/login');
+        navigate('/login'); // Kick them out if not logged in
         return;
       }
 
-      try {
-        // 3. Send the token to the backend bouncer (/me route)
-        const response = await fetch('http://localhost:5002/api/auth/me', {
-          headers: {
-            'Authorization': `Bearer ${token}` // This matches what our middleware expects
-          }
-        });
-        
-        const data = await response.json();
-
-        if (response.ok) {
-          // 4. Save the user data to state to display it
-          setUser(data);
-        } else {
-          // If the token is invalid/expired, clear it and redirect
-          localStorage.removeItem('token');
-          navigate('/login');
+      const response = await fetch('http://127.0.0.1:5002/api/teams', {
+        headers: {
+          'Authorization': `Bearer ${token}` // Prove who we are to the backend
         }
-      } catch (error) {
-        console.error('Error fetching profile:', error);
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setTeams(data); // Save the teams to our React state
       }
-    };
-
-    fetchProfile();
-  }, [navigate]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/login');
+    } catch (error) {
+      console.error('Error fetching teams:', error);
+    }
   };
 
-  // Show a loading screen while checking the token
-  if (!user) return <div>Loading...</div>;
+  // 2. Handle creating a new team
+  const handleCreateTeam = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://127.0.0.1:5002/api/teams', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ name, description })
+      });
+
+      if (response.ok) {
+        setName(''); // Clear the input
+        setDescription(''); // Clear the input
+        fetchTeams(); // Instantly refresh the team list!
+      } else {
+        alert('Failed to create team.');
+      }
+    } catch (error) {
+      console.error('Error creating team:', error);
+    }
+  };
 
   return (
-    <div style={{ textAlign: 'center', marginTop: '50px' }}>
-      <h1>Welcome to TeamFlow, {user.name}!</h1>
-      <p>Your registered email is: {user.email}</p>
-      <button onClick={handleLogout} style={{ marginTop: '20px' }}>
-        Logout
-      </button>
+    <div style={{ padding: '20px' }}>
+      <h1>Welcome to TeamFlow</h1>
+      
+      {/* Team Creation Form */}
+      <div style={{ marginBottom: '30px', padding: '15px', border: '1px solid #ccc' }}>
+        <h3>Create a New Team</h3>
+        <form onSubmit={handleCreateTeam}>
+          <input 
+            type="text" 
+            placeholder="Team Name" 
+            value={name} 
+            onChange={(e) => setName(e.target.value)} 
+            required 
+            style={{ marginRight: '10px' }}
+          />
+          <input 
+            type="text" 
+            placeholder="Description (Optional)" 
+            value={description} 
+            onChange={(e) => setDescription(e.target.value)} 
+            style={{ marginRight: '10px' }}
+          />
+          <button type="submit">Create Team</button>
+        </form>
+      </div>
+
+      {/* Display List of Teams */}
+      <h3>Your Workspaces</h3>
+      {teams.length === 0 ? (
+        <p>You aren't in any teams yet. Create one above!</p>
+      ) : (
+        <ul>
+          {teams.map(team => (
+            <li key={team._id} style={{ marginBottom: '10px' }}>
+              <strong>{team.name}</strong> 
+              {team.description && <span> - {team.description}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

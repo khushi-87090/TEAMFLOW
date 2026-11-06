@@ -1,10 +1,11 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors'); // The new bridge for your React frontend
+const cors = require('cors'); // The bridge for your React frontend
 require('dotenv').config();
 
 // Import Routes
 const authRoutes = require('./routes/auth');
+const teamRoutes = require('./routes/teams'); // 1. Added Team routes import
 
 const app = express();
 
@@ -13,8 +14,9 @@ app.use(cors()); // Must be before routes!
 app.use(express.json()); // Allows your server to read the JSON data from React
 
 // Routes
-// We prefix the auth routes with '/api/auth' to match what your frontend is calling
+// We prefix the routes to match what your frontend will call
 app.use('/api/auth', authRoutes);
+app.use('/api/teams', teamRoutes); // 2. Added Team routes usage
 
 // Database Connection
 mongoose.connect(process.env.MONGO_URI)
