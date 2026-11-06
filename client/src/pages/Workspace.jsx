@@ -1,23 +1,38 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { io } from 'socket.io-client'; // 1. Import Socket.io
+
+// 2. Connect to your backend socket server
+const socket = io('http://127.0.0.1:5002'); 
 
 export default function Workspace() {
   const { id } = useParams(); 
   const navigate = useNavigate();
   
-  // Task State
   const [tasks, setTasks] = useState([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
 
-  // Chat State
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
 
-  // Fetch both tasks and messages when the page loads
   useEffect(() => {
     fetchTasks();
     fetchMessages();
+
+    // --- NEW: SOCKET.IO ROOM LOGIC ---
+    // Join the specific room for this team
+    socket.emit('join_team', id);
+
+    // Listen for pings from the server saying someone else sent a message
+    socket.on('receive_message', () => {
+      fetchMessages(); // Instantly refresh the chat!
+    });
+
+    // Cleanup when we leave the page
+    return () => {
+      socket.off('receive_message');
+    };
   }, [id]);
 
   // --- TASK FUNCTIONS ---
@@ -105,7 +120,10 @@ export default function Workspace() {
 
       if (response.ok) {
         setNewMessage('');
-        fetchMessages(); 
+        fetchMessages(); // Update our own screen
+        
+        // --- NEW: Tell the server we sent a message so it can alert others! ---
+        socket.emit('send_message', { team: id }); 
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -121,24 +139,15 @@ export default function Workspace() {
       <h2>Team Workspace</h2>
       <hr style={{ marginBottom: '20px' }}/>
 
-      {/* Main Layout: Two Columns */}
       <div style={{ display: 'flex', gap: '40px', alignItems: 'flex-start' }}>
         
-        {/* LEFT COLUMN: TASKS (60% width) */}
+        {/* LEFT COLUMN: TASKS */}
         <div style={{ flex: '6' }}>
           <div style={{ marginBottom: '30px', padding: '15px', border: '1px solid #ccc', backgroundColor: '#f9f9f9' }}>
             <h3>Create a New Task</h3>
             <form onSubmit={handleCreateTask}>
-              <input 
-                type="text" placeholder="Task Title" value={title} 
-                onChange={(e) => setTitle(e.target.value)} required 
-                style={{ marginRight: '10px' }}
-              />
-              <input 
-                type="text" placeholder="Details (Optional)" value={description} 
-                onChange={(e) => setDescription(e.target.value)} 
-                style={{ marginRight: '10px' }}
-              />
+              <input type="text" placeholder="Task Title" value={title} onChange={(e) => setTitle(e.target.value)} required style={{ marginRight: '10px' }} />
+              <input type="text" placeholder="Details (Optional)" value={description} onChange={(e) => setDescription(e.target.value)} style={{ marginRight: '10px' }} />
               <button type="submit">Add Task</button>
             </form>
           </div>
@@ -149,16 +158,11 @@ export default function Workspace() {
           ) : (
             <ul style={{ listStyleType: 'none', padding: 0 }}>
               {tasks.map(task => (
-                <li key={task._id} style={{ 
-                  border: '1px solid #ddd', padding: '10px', marginBottom: '10px', borderRadius: '5px',
-                  backgroundColor: task.status === 'done' ? '#e8f5e9' : 'white'
-                }}>
+                <li key={task._id} style={{ border: '1px solid #ddd', padding: '10px', marginBottom: '10px', borderRadius: '5px', backgroundColor: task.status === 'done' ? '#e8f5e9' : 'white' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <strong>{task.title}</strong> 
-                      <span style={{ marginLeft: '10px', padding: '2px 8px', backgroundColor: '#e0e0e0', borderRadius: '10px', fontSize: '12px' }}>
-                        {task.status}
-                      </span>
+                      <span style={{ marginLeft: '10px', padding: '2px 8px', backgroundColor: '#e0e0e0', borderRadius: '10px', fontSize: '12px' }}>{task.status}</span>
                       {task.description && <p style={{ margin: '5px 0 0 0', color: '#555' }}>{task.description}</p>}
                     </div>
                     
@@ -174,13 +178,12 @@ export default function Workspace() {
           )}
         </div>
 
-        {/* RIGHT COLUMN: TEAM CHAT (40% width) */}
+        {/* RIGHT COLUMN: TEAM CHAT */}
         <div style={{ flex: '4', border: '1px solid #ccc', borderRadius: '8px', display: 'flex', flexDirection: 'column', height: '600px' }}>
           <div style={{ padding: '15px', backgroundColor: '#f1f1f1', borderBottom: '1px solid #ccc', borderTopLeftRadius: '8px', borderTopRightRadius: '8px' }}>
             <h3 style={{ margin: 0 }}>Team Activity / Chat</h3>
           </div>
           
-          {/* Messages Area */}
           <div style={{ flex: 1, padding: '15px', overflowY: 'auto', backgroundColor: '#fff' }}>
             {messages.length === 0 ? (
               <p style={{ color: '#888', textAlign: 'center' }}>No messages yet. Say hello!</p>
@@ -201,15 +204,8 @@ export default function Workspace() {
             )}
           </div>
 
-          {/* Message Input Form */}
           <form onSubmit={handleSendMessage} style={{ padding: '15px', borderTop: '1px solid #ccc', display: 'flex', gap: '10px' }}>
-            <input 
-              type="text" 
-              placeholder="Type a message..." 
-              value={newMessage} 
-              onChange={(e) => setNewMessage(e.target.value)} 
-              style={{ flex: 1, padding: '8px' }}
-            />
+            <input type="text" placeholder="Type a message..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)} style={{ flex: 1, padding: '8px' }} />
             <button type="submit" style={{ padding: '8px 15px' }}>Send</button>
           </form>
         </div>
