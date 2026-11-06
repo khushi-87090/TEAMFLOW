@@ -1,39 +1,27 @@
-const express = require('express');
-const Team = require('../models/Team');
-const verifyToken = require('../middleware/authMiddleware'); // Protects these routes
+// At the top of the file, make sure you have this (adjust path if needed):
+// const User = require('../models/User');
+// const Team = require('../models/Team');
 
-const router = express.Router();
-
-// CREATE A NEW TEAM
-router.post('/', verifyToken, async (req, res) => {
+// NEW: Invite a user to a team by email
+router.post('/:teamId/invite', async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const { email } = req.body;
     
-    const newTeam = new Team({
-      name,
-      description,
-      owner: req.user.userId,
-      members: [req.user.userId] // The creator automatically becomes the first member
-    });
-    
-    await newTeam.save();
-    res.status(201).json(newTeam);
+    // 1. Find the user by their email
+    const userToInvite = await User.findOne({ email });
+    if (!userToInvite) {
+      return res.status(404).json({ message: 'User not found in TeamFlow. Make sure they are registered!' });
+    }
+
+    // 2. Add them to the team's members list (using $addToSet to prevent duplicates)
+    await Team.findByIdAndUpdate(
+      req.params.teamId, 
+      { $addToSet: { members: userToInvite._id } }
+    );
+
+    res.json({ message: `${userToInvite.username} has been added to the team!` });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error creating team' });
+    console.error('Error inviting user:', error);
+    res.status(500).json({ error: 'Failed to invite user' });
   }
 });
-
-// GET ALL TEAMS FOR THE LOGGED-IN USER
-router.get('/', verifyToken, async (req, res) => {
-  try {
-    // Find any team where this user's ID is in the members array
-    const teams = await Team.find({ members: req.user.userId });
-    res.status(200).json(teams);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error fetching teams' });
-  }
-});
-
-module.exports = router;
