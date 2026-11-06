@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 export default function Dashboard() {
   const [teams, setTeams] = useState([]);
@@ -8,36 +8,35 @@ export default function Dashboard() {
   
   const navigate = useNavigate();
 
-  // 1. Fetch the user's teams as soon as the page loads
+  // Fetch the user's teams as soon as the page loads
   useEffect(() => {
     fetchTeams();
   }, []);
 
   const fetchTeams = async () => {
     try {
-      // Get the secure token we saved during login
       const token = localStorage.getItem('token');
       if (!token) {
-        navigate('/login'); // Kick them out if not logged in
+        navigate('/login'); 
         return;
       }
 
       const response = await fetch('http://127.0.0.1:5002/api/teams', {
         headers: {
-          'Authorization': `Bearer ${token}` // Prove who we are to the backend
+          'Authorization': `Bearer ${token}` 
         }
       });
       
       if (response.ok) {
         const data = await response.json();
-        setTeams(data); // Save the teams to our React state
+        setTeams(data); 
       }
     } catch (error) {
       console.error('Error fetching teams:', error);
     }
   };
 
-  // 2. Handle creating a new team
+  // Handle creating a new team
   const handleCreateTeam = async (e) => {
     e.preventDefault();
     try {
@@ -98,7 +97,10 @@ export default function Dashboard() {
         <ul>
           {teams.map(team => (
             <li key={team._id} style={{ marginBottom: '10px' }}>
-              <strong>{team.name}</strong> 
+              {/* This is the new clickable link! */}
+              <Link to={`/team/${team._id}`} style={{ textDecoration: 'none', color: 'blue' }}>
+                <strong>{team.name}</strong> 
+              </Link>
               {team.description && <span> - {team.description}</span>}
             </li>
           ))}
