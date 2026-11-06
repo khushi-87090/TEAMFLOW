@@ -11,7 +11,8 @@ export default function Login() {
     e.preventDefault();
 
     try {
-      const response = await fetch('http://localhost:5002/api/auth/login', {
+      // Updated port and IP here!
+      const response = await fetch('http://127.0.0.1:5002/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -22,12 +23,12 @@ export default function Login() {
       const data = await response.json();
 
       if (response.ok) {
-        // Save the secure token to local storage so the user stays logged in
+        // Save the secure token to local storage
         localStorage.setItem('token', data.token);
         alert('Login successful!');
         navigate('/'); // Redirect to the home/dashboard page
       } else {
-        alert(data.message); // Show error (e.g., "Invalid email or password")
+        alert(data.message);
       }
     } catch (error) {
       console.error('Error connecting to server:', error);
