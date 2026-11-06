@@ -14,6 +14,7 @@ export default function Workspace() {
 
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [onlineCount, setOnlineCount] = useState(1);
   
   const messagesEndRef = useRef(null);
 
@@ -27,12 +28,16 @@ export default function Workspace() {
       fetchMessages();
     });
 
+    socket.on('online_users_update', (count) => {
+      setOnlineCount(count);
+    });
+
     return () => {
       socket.off('receive_message');
+      socket.off('online_users_update');
     };
   }, [id]);
 
-  // Auto-scroll to bottom of chat when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -91,6 +96,20 @@ export default function Workspace() {
     }
   };
 
+  const handleDeleteTask = async (taskId) => {
+    if (!window.confirm('Are you sure you want to delete this task?')) return;
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://127.0.0.1:5002/api/tasks/${taskId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) fetchTasks(); 
+    } catch (error) {
+      console.error('Error deleting task:', error);
+    }
+  };
+
   const fetchMessages = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -135,7 +154,6 @@ export default function Workspace() {
 
   return (
     <div className="min-h-screen bg-[#0f172a] text-[#f8fafc] font-sans selection:bg-[#f97316] selection:text-white pb-10">
-      {/* Navbar */}
       <nav className="bg-[#1e293b] border-b border-[#334155] px-8 py-4 flex justify-between items-center sticky top-0 z-50 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-gradient-to-br from-[#f97316] to-orange-500 rounded-lg shadow-lg flex items-center justify-center font-bold text-white">
@@ -143,10 +161,7 @@ export default function Workspace() {
           </div>
           <h1 className="text-xl font-extrabold text-white tracking-tight">TeamFlow</h1>
         </div>
-        <button 
-          onClick={handleLogout} 
-          className="bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white px-5 py-2 rounded-xl font-medium transition-all duration-200"
-        >
+        <button onClick={handleLogout} className="bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white px-5 py-2 rounded-xl font-medium transition-all duration-200">
           Logout
         </button>
       </nav>
@@ -164,25 +179,11 @@ export default function Workspace() {
               <h2 className="text-3xl font-extrabold text-white tracking-tight">Team Workspace</h2>
             </div>
 
-            {/* Create Task Form */}
             <div className="bg-[#1e293b] border border-[#334155] rounded-2xl p-6 mb-8 shadow-lg">
               <form onSubmit={handleCreateTask} className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-1 space-y-4">
-                  <input 
-                    type="text" 
-                    placeholder="Task Title" 
-                    value={title} 
-                    onChange={(e) => setTitle(e.target.value)} 
-                    className="w-full bg-[#0f172a] border border-[#334155] rounded-xl px-4 py-3 text-white placeholder-[#475569] focus:outline-none focus:ring-2 focus:ring-[#f97316]"
-                    required 
-                  />
-                  <input 
-                    type="text" 
-                    placeholder="Details (Optional)" 
-                    value={description} 
-                    onChange={(e) => setDescription(e.target.value)} 
-                    className="w-full bg-[#0f172a] border border-[#334155] rounded-xl px-4 py-3 text-white placeholder-[#475569] focus:outline-none focus:ring-2 focus:ring-[#f97316]"
-                  />
+                  <input type="text" placeholder="Task Title" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full bg-[#0f172a] border border-[#334155] rounded-xl px-4 py-3 text-white placeholder-[#475569] focus:outline-none focus:ring-2 focus:ring-[#f97316]" required />
+                  <input type="text" placeholder="Details (Optional)" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full bg-[#0f172a] border border-[#334155] rounded-xl px-4 py-3 text-white placeholder-[#475569] focus:outline-none focus:ring-2 focus:ring-[#f97316]" />
                 </div>
                 <button type="submit" className="bg-white text-[#0f172a] hover:bg-gray-200 font-bold py-3 px-8 rounded-xl transition-all h-fit sm:self-center">
                   + Add Task
@@ -201,14 +202,19 @@ export default function Workspace() {
                   <div key={task._id} className={`bg-[#1e293b] border rounded-2xl p-5 shadow-sm transition-all flex flex-col justify-between ${task.status === 'done' ? 'border-green-500/50 shadow-green-500/5' : task.status === 'in-progress' ? 'border-blue-500/50 shadow-blue-500/5' : 'border-[#334155]'}`}>
                     <div>
                       <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-bold text-lg text-white leading-tight">{task.title}</h4>
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
-                          task.status === 'done' ? 'bg-green-500/20 text-green-400' : 
-                          task.status === 'in-progress' ? 'bg-blue-500/20 text-blue-400' : 
-                          'bg-slate-700 text-slate-300'
-                        }`}>
-                          {task.status === 'todo' ? 'Todo' : task.status === 'in-progress' ? 'In Progress' : 'Done'}
-                        </span>
+                        <div className="flex-1">
+                          <h4 className="font-bold text-lg text-white leading-tight">{task.title}</h4>
+                        </div>
+                        <div className="flex items-center gap-2 ml-2">
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+                            task.status === 'done' ? 'bg-green-500/20 text-green-400' : 
+                            task.status === 'in-progress' ? 'bg-blue-500/20 text-blue-400' : 
+                            'bg-slate-700 text-slate-300'
+                          }`}>
+                            {task.status === 'todo' ? 'Todo' : task.status === 'in-progress' ? 'In Progress' : 'Done'}
+                          </span>
+                          <button onClick={() => handleDeleteTask(task._id)} className="text-slate-500 hover:text-red-400 hover:bg-red-400/10 h-6 w-6 rounded-full flex items-center justify-center transition-colors" title="Delete Task">✕</button>
+                        </div>
                       </div>
                       {task.description && <p className="text-[#94a3b8] text-sm mt-2">{task.description}</p>}
                     </div>
@@ -226,8 +232,17 @@ export default function Workspace() {
 
           {/* RIGHT COLUMN: TEAM CHAT */}
           <div className="flex-[4] flex flex-col h-[700px] bg-[#1e293b] border-2 border-[#3b82f6]/30 rounded-3xl overflow-hidden shadow-2xl shadow-blue-900/10">
-            <div className="p-5 border-b border-[#334155] bg-[#1e293b]">
+            <div className="p-5 border-b border-[#334155] bg-[#1e293b] flex justify-between items-center">
               <h3 className="text-lg font-bold text-white">Team Activity / Chat</h3>
+              <div className="flex items-center gap-2 bg-[#0f172a] px-3 py-1.5 rounded-full border border-[#334155] shadow-inner">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                </span>
+                <span className="text-xs font-bold text-green-400 tracking-wide">
+                  {onlineCount} {onlineCount === 1 ? 'User' : 'Users'} Online
+                </span>
+              </div>
             </div>
             
             <div className="flex-1 p-5 overflow-y-auto bg-[#0f172a] space-y-6">
@@ -252,22 +267,13 @@ export default function Workspace() {
                   </div>
                 ))
               )}
-              {/* Invisible div to help us auto-scroll to the bottom */}
               <div ref={messagesEndRef} /> 
             </div>
 
             <div className="p-4 bg-[#1e293b] border-t border-[#334155]">
               <form onSubmit={handleSendMessage} className="flex gap-2">
-                <input 
-                  type="text" 
-                  placeholder="Type a message..." 
-                  value={newMessage} 
-                  onChange={(e) => setNewMessage(e.target.value)} 
-                  className="flex-1 bg-[#0f172a] border border-[#334155] rounded-xl px-4 py-3 text-white placeholder-[#475569] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]" 
-                />
-                <button type="submit" className="bg-[#3b82f6] hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-xl transition-all">
-                  Send
-                </button>
+                <input type="text" placeholder="Type a message..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)} className="flex-1 bg-[#0f172a] border border-[#334155] rounded-xl px-4 py-3 text-white placeholder-[#475569] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]" />
+                <button type="submit" className="bg-[#3b82f6] hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-xl transition-all">Send</button>
               </form>
             </div>
           </div>
