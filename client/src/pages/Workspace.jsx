@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { io } from 'socket.io-client'; // 1. Import Socket.io
+import { io } from 'socket.io-client';
 
-// 2. Connect to your backend socket server
 const socket = io('http://127.0.0.1:5002'); 
 
 export default function Workspace() {
@@ -15,27 +14,29 @@ export default function Workspace() {
 
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  
+  const messagesEndRef = useRef(null);
 
   useEffect(() => {
     fetchTasks();
     fetchMessages();
 
-    // --- NEW: SOCKET.IO ROOM LOGIC ---
-    // Join the specific room for this team
     socket.emit('join_team', id);
 
-    // Listen for pings from the server saying someone else sent a message
     socket.on('receive_message', () => {
-      fetchMessages(); // Instantly refresh the chat!
+      fetchMessages();
     });
 
-    // Cleanup when we leave the page
     return () => {
       socket.off('receive_message');
     };
   }, [id]);
 
-  // --- TASK FUNCTIONS ---
+  // Auto-scroll to bottom of chat when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
   const fetchTasks = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -90,7 +91,6 @@ export default function Workspace() {
     }
   };
 
-  // --- CHAT FUNCTIONS ---
   const fetchMessages = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -120,9 +120,7 @@ export default function Workspace() {
 
       if (response.ok) {
         setNewMessage('');
-        fetchMessages(); // Update our own screen
-        
-        // --- NEW: Tell the server we sent a message so it can alert others! ---
+        fetchMessages(); 
         socket.emit('send_message', { team: id }); 
       }
     } catch (error) {
@@ -130,87 +128,152 @@ export default function Workspace() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    navigate('/login');
+  };
+
   return (
-    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-      <Link to="/" style={{ textDecoration: 'none', color: 'blue', marginBottom: '20px', display: 'block' }}>
-        &larr; Back to Dashboard
-      </Link>
-      
-      <h2>Team Workspace</h2>
-      <hr style={{ marginBottom: '20px' }}/>
-
-      <div style={{ display: 'flex', gap: '40px', alignItems: 'flex-start' }}>
-        
-        {/* LEFT COLUMN: TASKS */}
-        <div style={{ flex: '6' }}>
-          <div style={{ marginBottom: '30px', padding: '15px', border: '1px solid #ccc', backgroundColor: '#f9f9f9' }}>
-            <h3>Create a New Task</h3>
-            <form onSubmit={handleCreateTask}>
-              <input type="text" placeholder="Task Title" value={title} onChange={(e) => setTitle(e.target.value)} required style={{ marginRight: '10px' }} />
-              <input type="text" placeholder="Details (Optional)" value={description} onChange={(e) => setDescription(e.target.value)} style={{ marginRight: '10px' }} />
-              <button type="submit">Add Task</button>
-            </form>
+    <div className="min-h-screen bg-[#0f172a] text-[#f8fafc] font-sans selection:bg-[#f97316] selection:text-white pb-10">
+      {/* Navbar */}
+      <nav className="bg-[#1e293b] border-b border-[#334155] px-8 py-4 flex justify-between items-center sticky top-0 z-50 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-gradient-to-br from-[#f97316] to-orange-500 rounded-lg shadow-lg flex items-center justify-center font-bold text-white">
+            T
           </div>
+          <h1 className="text-xl font-extrabold text-white tracking-tight">TeamFlow</h1>
+        </div>
+        <button 
+          onClick={handleLogout} 
+          className="bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white px-5 py-2 rounded-xl font-medium transition-all duration-200"
+        >
+          Logout
+        </button>
+      </nav>
 
-          <h3>Task List</h3>
-          {tasks.length === 0 ? (
-            <p>No tasks yet. Create one above to get started!</p>
-          ) : (
-            <ul style={{ listStyleType: 'none', padding: 0 }}>
-              {tasks.map(task => (
-                <li key={task._id} style={{ border: '1px solid #ddd', padding: '10px', marginBottom: '10px', borderRadius: '5px', backgroundColor: task.status === 'done' ? '#e8f5e9' : 'white' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <main className="max-w-[1400px] mx-auto p-6 mt-4">
+        <Link to="/" className="inline-flex items-center text-[#94a3b8] hover:text-white mb-6 bg-[#1e293b] border border-[#334155] px-4 py-2 rounded-xl transition-colors">
+          <span className="mr-2">&larr;</span> Back to Dashboard
+        </Link>
+        
+        <div className="flex flex-col lg:flex-row gap-8">
+          
+          {/* LEFT COLUMN: TASKS */}
+          <div className="flex-[6]">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-3xl font-extrabold text-white tracking-tight">Team Workspace</h2>
+            </div>
+
+            {/* Create Task Form */}
+            <div className="bg-[#1e293b] border border-[#334155] rounded-2xl p-6 mb-8 shadow-lg">
+              <form onSubmit={handleCreateTask} className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 space-y-4">
+                  <input 
+                    type="text" 
+                    placeholder="Task Title" 
+                    value={title} 
+                    onChange={(e) => setTitle(e.target.value)} 
+                    className="w-full bg-[#0f172a] border border-[#334155] rounded-xl px-4 py-3 text-white placeholder-[#475569] focus:outline-none focus:ring-2 focus:ring-[#f97316]"
+                    required 
+                  />
+                  <input 
+                    type="text" 
+                    placeholder="Details (Optional)" 
+                    value={description} 
+                    onChange={(e) => setDescription(e.target.value)} 
+                    className="w-full bg-[#0f172a] border border-[#334155] rounded-xl px-4 py-3 text-white placeholder-[#475569] focus:outline-none focus:ring-2 focus:ring-[#f97316]"
+                  />
+                </div>
+                <button type="submit" className="bg-white text-[#0f172a] hover:bg-gray-200 font-bold py-3 px-8 rounded-xl transition-all h-fit sm:self-center">
+                  + Add Task
+                </button>
+              </form>
+            </div>
+
+            <h3 className="text-xl font-bold mb-4">Task List</h3>
+            {tasks.length === 0 ? (
+              <div className="text-center py-12 bg-[#1e293b]/50 border-2 border-[#334155] rounded-2xl border-dashed">
+                <p className="text-[#94a3b8]">No tasks yet. Create one above to get started!</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {tasks.map(task => (
+                  <div key={task._id} className={`bg-[#1e293b] border rounded-2xl p-5 shadow-sm transition-all flex flex-col justify-between ${task.status === 'done' ? 'border-green-500/50 shadow-green-500/5' : task.status === 'in-progress' ? 'border-blue-500/50 shadow-blue-500/5' : 'border-[#334155]'}`}>
                     <div>
-                      <strong>{task.title}</strong> 
-                      <span style={{ marginLeft: '10px', padding: '2px 8px', backgroundColor: '#e0e0e0', borderRadius: '10px', fontSize: '12px' }}>{task.status}</span>
-                      {task.description && <p style={{ margin: '5px 0 0 0', color: '#555' }}>{task.description}</p>}
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-bold text-lg text-white leading-tight">{task.title}</h4>
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+                          task.status === 'done' ? 'bg-green-500/20 text-green-400' : 
+                          task.status === 'in-progress' ? 'bg-blue-500/20 text-blue-400' : 
+                          'bg-slate-700 text-slate-300'
+                        }`}>
+                          {task.status === 'todo' ? 'Todo' : task.status === 'in-progress' ? 'In Progress' : 'Done'}
+                        </span>
+                      </div>
+                      {task.description && <p className="text-[#94a3b8] text-sm mt-2">{task.description}</p>}
                     </div>
                     
-                    <div>
-                      {task.status !== 'todo' && <button onClick={() => handleUpdateStatus(task._id, 'todo')} style={{ marginRight: '5px' }}>Todo</button>}
-                      {task.status !== 'in-progress' && <button onClick={() => handleUpdateStatus(task._id, 'in-progress')} style={{ marginRight: '5px' }}>In Progress</button>}
-                      {task.status !== 'done' && <button onClick={() => handleUpdateStatus(task._id, 'done')}>Done</button>}
+                    <div className="mt-5 flex gap-2 border-t border-[#334155] pt-4">
+                      {task.status !== 'todo' && <button onClick={() => handleUpdateStatus(task._id, 'todo')} className="text-xs bg-[#0f172a] hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-[#334155] transition-colors">&larr; Todo</button>}
+                      {task.status !== 'in-progress' && <button onClick={() => handleUpdateStatus(task._id, 'in-progress')} className="text-xs bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 px-3 py-1.5 rounded-lg border border-blue-500/20 transition-colors">In Progress</button>}
+                      {task.status !== 'done' && <button onClick={() => handleUpdateStatus(task._id, 'done')} className="text-xs bg-green-500/10 hover:bg-green-500/20 text-green-400 px-3 py-1.5 rounded-lg border border-green-500/20 transition-colors">Done &rarr;</button>}
                     </div>
                   </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* RIGHT COLUMN: TEAM CHAT */}
-        <div style={{ flex: '4', border: '1px solid #ccc', borderRadius: '8px', display: 'flex', flexDirection: 'column', height: '600px' }}>
-          <div style={{ padding: '15px', backgroundColor: '#f1f1f1', borderBottom: '1px solid #ccc', borderTopLeftRadius: '8px', borderTopRightRadius: '8px' }}>
-            <h3 style={{ margin: 0 }}>Team Activity / Chat</h3>
-          </div>
-          
-          <div style={{ flex: 1, padding: '15px', overflowY: 'auto', backgroundColor: '#fff' }}>
-            {messages.length === 0 ? (
-              <p style={{ color: '#888', textAlign: 'center' }}>No messages yet. Say hello!</p>
-            ) : (
-              messages.map(msg => (
-                <div key={msg._id} style={{ marginBottom: '15px' }}>
-                  <strong style={{ color: '#0056b3' }}>
-                    {msg.sender?.username || msg.sender?.email || 'Unknown User'}
-                  </strong>
-                  <span style={{ fontSize: '12px', color: '#999', marginLeft: '8px' }}>
-                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                  <p style={{ margin: '4px 0 0 0', backgroundColor: '#f9f9f9', padding: '8px', borderRadius: '4px' }}>
-                    {msg.text}
-                  </p>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
 
-          <form onSubmit={handleSendMessage} style={{ padding: '15px', borderTop: '1px solid #ccc', display: 'flex', gap: '10px' }}>
-            <input type="text" placeholder="Type a message..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)} style={{ flex: 1, padding: '8px' }} />
-            <button type="submit" style={{ padding: '8px 15px' }}>Send</button>
-          </form>
-        </div>
+          {/* RIGHT COLUMN: TEAM CHAT */}
+          <div className="flex-[4] flex flex-col h-[700px] bg-[#1e293b] border-2 border-[#3b82f6]/30 rounded-3xl overflow-hidden shadow-2xl shadow-blue-900/10">
+            <div className="p-5 border-b border-[#334155] bg-[#1e293b]">
+              <h3 className="text-lg font-bold text-white">Team Activity / Chat</h3>
+            </div>
+            
+            <div className="flex-1 p-5 overflow-y-auto bg-[#0f172a] space-y-6">
+              {messages.length === 0 ? (
+                <div className="h-full flex items-center justify-center">
+                  <p className="text-[#64748b] text-center">No messages yet.<br/>Break the ice!</p>
+                </div>
+              ) : (
+                messages.map(msg => (
+                  <div key={msg._id} className="flex flex-col">
+                    <div className="flex items-baseline gap-2 mb-1">
+                      <strong className="text-blue-400 text-sm">
+                        {msg.sender?.username || msg.sender?.email || 'Unknown User'}
+                      </strong>
+                      <span className="text-[10px] text-[#64748b]">
+                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <div className="bg-[#1e293b] border border-[#334155] p-3 rounded-2xl rounded-tl-sm text-sm text-slate-200 w-fit max-w-[85%] leading-relaxed shadow-sm">
+                      {msg.text}
+                    </div>
+                  </div>
+                ))
+              )}
+              {/* Invisible div to help us auto-scroll to the bottom */}
+              <div ref={messagesEndRef} /> 
+            </div>
 
-      </div>
+            <div className="p-4 bg-[#1e293b] border-t border-[#334155]">
+              <form onSubmit={handleSendMessage} className="flex gap-2">
+                <input 
+                  type="text" 
+                  placeholder="Type a message..." 
+                  value={newMessage} 
+                  onChange={(e) => setNewMessage(e.target.value)} 
+                  className="flex-1 bg-[#0f172a] border border-[#334155] rounded-xl px-4 py-3 text-white placeholder-[#475569] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]" 
+                />
+                <button type="submit" className="bg-[#3b82f6] hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-xl transition-all">
+                  Send
+                </button>
+              </form>
+            </div>
+          </div>
+
+        </div>
+      </main>
     </div>
   );
 }
