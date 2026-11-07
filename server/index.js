@@ -12,16 +12,30 @@ const taskRoutes = require('./routes/tasks');
 const messageRoutes = require('./routes/messages');
 
 const app = express();
-
 const server = http.createServer(app);
+
+// 1. UPDATED SOCKET.IO CORS
 const io = new Server(server, {
   cors: {
-    origin: "*", // IMPORTANT: Allows your deployed frontend to connect!
+    origin: [
+      "http://localhost:5173", 
+      "https://teamflow1.vercel.app" // Your live Vercel URL
+    ], 
     methods: ["GET", "POST"]
   }
 });
 
-app.use(cors());
+// 2. UPDATED EXPRESS CORS
+app.use(cors({
+  origin: [
+    'http://localhost:5173', 
+    'https://teamflow1.vercel.app' // Your live Vercel URL
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
