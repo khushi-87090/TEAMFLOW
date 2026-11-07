@@ -1,34 +1,52 @@
 const express = require('express');
 const router = express.Router();
 
-// Import models
+// Import models & authentication middleware
 const Team = require('../models/Team');
 const User = require('../models/User');
+const verifyToken = require('../middleware/authMiddleware');
 
-// GET all teams for the logged-in user
-router.get('/', async (req, res) => {
+// GET all teams for the logged-in user (Protected)
+router.get('/', verifyToken, async (req, res) => {
   try {
-    const teams = await Team.find(); 
+    // Find teams where the user is either the owner or a member
+    const teams = await Team.find({
+      $or: [
+        { owner: req.user.userId },
+        { members: req.user.userId }
+      ]
+    }); 
     res.json(teams);
   } catch (error) {
+    console.error('Fetch Teams Error:', error);
     res.status(500).json({ error: 'Failed to fetch teams' });
   }
 });
 
-// POST to create a new team
-router.post('/', async (req, res) => {
+// POST to create a new team (Protected)
+router.post('/', verifyToken, async (req, res) => {
   try {
     const { name } = req.body;
-    const newTeam = new Team({ name });
+    if (!name) {
+      return res.status(400).json({ error: 'Team name is required' });
+    }
+
+    const newTeam = new Team({ 
+      name, 
+      owner: req.user.userId,
+      members: [req.user.userId] // Automatically add creator as a member
+    });
+
     const savedTeam = await newTeam.save();
     res.status(201).json(savedTeam);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create team' });
+    console.error('Create Team Error:', error);
+    res.status(500).json({ error: 'Failed to create team', details: error.message });
   }
 });
 
-// POST to invite a user to a team
-router.post('/:teamId/invite', async (req, res) => {
+// POST to invite a user to a team (Protected)
+router.post('/:teamId/invite', verifyToken, async (req, res) => {
   try {
     const { email } = req.body;
     
@@ -39,12 +57,17 @@ router.post('/:teamId/invite', async (req, res) => {
     }
 
     // 2. Add them to the team's members list
-    await Team.findByIdAndUpdate(
+    const updatedTeam = await Team.findByIdAndUpdate(
       req.params.teamId, 
-      { $addToSet: { members: userToInvite._id } }
+      { $addToSet: { members: userToInvite._id } },
+      { new: true }
     );
 
-    res.json({ message: `${userToInvite.username} has been added to the team!` });
+    if (!updatedTeam) {
+      return res.status(404).json({ error: 'Team not found' });
+    }
+
+    res.json({ message: `${userToInvite.name || userToInvite.email} has been added to the team!` });
   } catch (error) {
     console.error('Error inviting user:', error);
     res.status(500).json({ error: 'Failed to invite user' });
