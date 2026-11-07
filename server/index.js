@@ -14,29 +14,29 @@ const messageRoutes = require('./routes/messages');
 const app = express();
 const server = http.createServer(app);
 
-// 1. UPDATED SOCKET.IO CORS
+// Helper function that allows localhost AND any .vercel.app URL automatically
+const checkOrigin = (origin, callback) => {
+  if (!origin || origin.startsWith("http://localhost") || origin.endsWith(".vercel.app")) {
+    callback(null, true);
+  } else {
+    callback(new Error("Not allowed by CORS"));
+  }
+};
+
+// 1. AUTOMATIC SOCKET.IO CORS
 const io = new Server(server, {
   cors: {
-    origin: [
-      "http://localhost:5173", 
-      "https://teamflow1.vercel.app",
-      "https://teamflow-bswts8a12-teamflow6.vercel.app", // Added your deployment URL
-      "https://teamflow-beta-ten.vercel.app"             // Added your beta URL
-    ], 
-    methods: ["GET", "POST"]
+    origin: checkOrigin,
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
-// 2. UPDATED EXPRESS CORS
+// 2. AUTOMATIC EXPRESS CORS
 app.use(cors({
-  origin: [
-    'http://localhost:5173', 
-    'https://teamflow1.vercel.app',
-    'https://teamflow-bswts8a12-teamflow6.vercel.app', // Added your deployment URL
-    'https://teamflow-beta-ten.vercel.app'             // Added your beta URL
-  ],
+  origin: checkOrigin,
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
@@ -51,38 +51,25 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('Connected to MongoDB successfully!'))
   .catch((err) => console.error('MongoDB connection error:', err));
 
-// Object to track how many users are in each team room
 const teamUsers = {};
 
 io.on('connection', (socket) => {
   console.log(`User Connected: ${socket.id}`);
   let currentTeam = null;
 
-  // When a user opens a team workspace
   socket.on('join_team', (teamId) => {
     socket.join(teamId);
     currentTeam = teamId;
-    
-    // Increment the user count for this team
     if (!teamUsers[teamId]) teamUsers[teamId] = 0;
     teamUsers[teamId]++;
-    
-    console.log(`User ${socket.id} joined room: ${teamId}. Total online: ${teamUsers[teamId]}`);
-    
-    // Broadcast the new count to everyone in the room
     io.to(teamId).emit('online_users_update', teamUsers[teamId]);
   });
 
-  // When a user sends a message
   socket.on('send_message', (data) => {
     io.to(data.team).emit('receive_message', data);
   });
 
-  // When a user leaves the page or closes the tab
   socket.on('disconnect', () => {
-    console.log('User Disconnected', socket.id);
-    
-    // Decrement the user count and broadcast the updated number
     if (currentTeam && teamUsers[currentTeam]) {
       teamUsers[currentTeam]--;
       io.to(currentTeam).emit('online_users_update', teamUsers[currentTeam]);
