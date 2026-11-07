@@ -18,7 +18,6 @@ export default function Dashboard() {
         return;
       }
       
-      // FIXED URL HERE (6woa)
       const response = await fetch('https://teamflow-backend-6woa.onrender.com/api/teams', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -36,7 +35,12 @@ export default function Dashboard() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      // FIXED URL HERE (6woa)
+      if (!token) {
+        alert('You are not logged in! Please log in again.');
+        navigate('/login');
+        return;
+      }
+
       const response = await fetch('https://teamflow-backend-6woa.onrender.com/api/teams', {
         method: 'POST',
         headers: {
@@ -46,12 +50,17 @@ export default function Dashboard() {
         body: JSON.stringify({ name: teamName })
       });
 
+      const data = await response.json();
+
       if (response.ok) {
         setTeamName('');
         fetchTeams(); // Refresh the list
+      } else {
+        alert('Error: ' + (data.error || data.message || 'Unknown error'));
       }
     } catch (error) {
       console.error('Error creating team:', error);
+      alert('Failed to connect to the server.');
     }
   };
 
@@ -89,7 +98,6 @@ export default function Dashboard() {
 
         {/* Create Team Section */}
         <div className="bg-[#1e293b] border border-[#334155] rounded-2xl p-6 mb-12 shadow-xl relative overflow-hidden">
-          {/* Subtle background glow */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-[#f97316] opacity-5 rounded-full blur-[80px] pointer-events-none"></div>
           
           <h3 className="text-xl font-semibold mb-4 text-white relative z-10">Create a New Workspace</h3>
