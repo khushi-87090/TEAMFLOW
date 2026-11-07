@@ -18,8 +18,8 @@ export default function Dashboard() {
         return;
       }
       
-      // UPDATED URL HERE
-      const response = await fetch('https://teamflow-backend-5wos.onrender.com/api/teams', {
+      // FIXED URL HERE (6woa)
+      const response = await fetch('https://teamflow-backend-6woa.onrender.com/api/teams', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -36,8 +36,8 @@ export default function Dashboard() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      // UPDATED URL HERE
-      const response = await fetch('https://teamflow-backend-5wos.onrender.com/api/teams', {
+      // FIXED URL HERE (6woa)
+      const response = await fetch('https://teamflow-backend-6woa.onrender.com/api/teams', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

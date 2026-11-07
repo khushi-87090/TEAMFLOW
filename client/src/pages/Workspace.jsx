@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 
-// UPDATED SOCKET URL HERE
-const socket = io('https://teamflow-backend-5wos.onrender.com'); 
+// FIXED SOCKET URL HERE (6woa)
+const socket = io('https://teamflow-backend-6woa.onrender.com'); 
 
 export default function Workspace() {
   const { id } = useParams(); 
@@ -49,7 +49,8 @@ export default function Workspace() {
       const token = localStorage.getItem('token');
       if (!token) return navigate('/login');
 
-      const response = await fetch(`https://teamflow-backend-5wos.onrender.com/api/tasks/${id}`, {
+      // FIXED URL HERE (6woa)
+      const response = await fetch(`https://teamflow-backend-6woa.onrender.com/api/tasks/${id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) setTasks(await response.json());
@@ -62,7 +63,8 @@ export default function Workspace() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`https://teamflow-backend-5wos.onrender.com/api/tasks/${id}`, {
+      // FIXED URL HERE (6woa)
+      const response = await fetch(`https://teamflow-backend-6woa.onrender.com/api/tasks/${id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -84,7 +86,8 @@ export default function Workspace() {
   const handleUpdateStatus = async (taskId, newStatus) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`https://teamflow-backend-5wos.onrender.com/api/tasks/${taskId}`, {
+      // FIXED URL HERE (6woa)
+      const response = await fetch(`https://teamflow-backend-6woa.onrender.com/api/tasks/${taskId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -102,7 +105,8 @@ export default function Workspace() {
     if (!window.confirm('Are you sure you want to delete this task?')) return;
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`https://teamflow-backend-5wos.onrender.com/api/tasks/${taskId}`, {
+      // FIXED URL HERE (6woa)
+      const response = await fetch(`https://teamflow-backend-6woa.onrender.com/api/tasks/${taskId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -116,7 +120,8 @@ export default function Workspace() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`https://teamflow-backend-5wos.onrender.com/api/teams/${id}/invite`, {
+      // FIXED URL HERE (6woa)
+      const response = await fetch(`https://teamflow-backend-6woa.onrender.com/api/teams/${id}/invite`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -136,7 +141,8 @@ export default function Workspace() {
   const fetchMessages = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`https://teamflow-backend-5wos.onrender.com/api/messages/${id}`, {
+      // FIXED URL HERE (6woa)
+      const response = await fetch(`https://teamflow-backend-6woa.onrender.com/api/messages/${id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) setMessages(await response.json());
@@ -151,7 +157,8 @@ export default function Workspace() {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`https://teamflow-backend-5wos.onrender.com/api/messages/${id}`, {
+      // FIXED URL HERE (6woa)
+      const response = await fetch(`https://teamflow-backend-6woa.onrender.com/api/messages/${id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
