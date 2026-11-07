@@ -11,8 +11,8 @@ export default function Login() {
     e.preventDefault();
 
     try {
-      // Updated port and IP here!
-      const response = await fetch('http://127.0.0.1:5002/api/auth/login', {
+      // UPDATED URL HERE
+      const response = await fetch('https://teamflow-backend-5wos.onrender.com/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

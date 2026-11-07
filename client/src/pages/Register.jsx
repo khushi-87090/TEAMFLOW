@@ -14,8 +14,8 @@ export default function Register() {
     e.preventDefault(); // Prevents the page from refreshing on submit
 
     try {
-      // 3. Send the data to your Node.js backend
-      const response = await fetch('http://127.0.0.1:5002/api/auth/register', {
+      // 3. Send the data to your Node.js backend (UPDATED URL HERE)
+      const response = await fetch('https://teamflow-backend-5wos.onrender.com/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

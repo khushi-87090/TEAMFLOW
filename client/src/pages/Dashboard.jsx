@@ -18,7 +18,8 @@ export default function Dashboard() {
         return;
       }
       
-      const response = await fetch('http://127.0.0.1:5002/api/teams', {
+      // UPDATED URL HERE
+      const response = await fetch('https://teamflow-backend-5wos.onrender.com/api/teams', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -35,7 +36,8 @@ export default function Dashboard() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://127.0.0.1:5002/api/teams', {
+      // UPDATED URL HERE
+      const response = await fetch('https://teamflow-backend-5wos.onrender.com/api/teams', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
